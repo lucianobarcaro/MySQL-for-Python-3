@@ -1365,7 +1365,7 @@ _mysql_row_to_tuple(
 
 	if (!(r = PyTuple_New(n))) return NULL;
 	length = mysql_fetch_lengths(self->result);
-        fields = mysql_fetch_fields(self->result);
+	fields = mysql_fetch_fields(self->result);
 
 #if MYSQL_VERSION_ID >= 32321
 	charset = mysql_character_set_name(&(self->conn->connection));
