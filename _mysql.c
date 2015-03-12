@@ -1314,41 +1314,36 @@ _mysql_ResultObject_field_flags(
 }
 
 static PyObject *
-_mysql_field_to_python(PyObject *converter, char *rowitem, unsigned long length, const char *charset)
+_mysql_field_to_python(PyObject *converter, char *rowitem, unsigned long length, const char *charset, unsigned long binary)
 {
 	PyObject *v;
-	if (rowitem)
-	{
-		if (charset)
-		{
+
+	if (rowitem) {
+		if (binary) {
+			return PyBytes_FromStringAndSize(rowitem, (int)length);
+		};
+
+		if (charset) {
 			PyObject *rowitem_unicode = PyUnicode_Decode(rowitem, (int)length, charset, "replace");
-			if (rowitem_unicode == NULL)
-			{
+			if (rowitem_unicode == NULL) {
 				return NULL;
-			} else
-			{
-				if (converter != Py_None)
-		        {
+			} else {
+				if (converter != Py_None) {
 					v = PyObject_CallFunction(converter, "O", rowitem_unicode);
 			                Py_XDECREF(rowitem_unicode);
-		        } else
-				{
+			        } else {
 					v = rowitem_unicode;
 				};
 			};
-		} else
-		{
-			if (converter != Py_None)
-		    {
+		} else {
+			if (converter != Py_None) {
 				v = PyObject_CallFunction(converter, "s#", rowitem, (int)length);
-		    } else
-		    {
+			} else {
 				v = PyUnicode_FromStringAndSize(rowitem, (int)length);
-			    if (!v) return NULL;
+				if (!v) return NULL;
 			};
 		};
-	} else
-	{
+	} else {
 		Py_INCREF(Py_None);
 		v = Py_None;
 	};
@@ -1364,10 +1359,13 @@ _mysql_row_to_tuple(
 	unsigned long *length;
 	PyObject *r, *c;
 	const char *charset;
+	MYSQL_FIELD *fields;
 
 	n = mysql_num_fields(self->result);
+
 	if (!(r = PyTuple_New(n))) return NULL;
 	length = mysql_fetch_lengths(self->result);
+        fields = mysql_fetch_fields(self->result);
 
 #if MYSQL_VERSION_ID >= 32321
 	charset = mysql_character_set_name(&(self->conn->connection));
@@ -1378,7 +1376,7 @@ _mysql_row_to_tuple(
 	for (i=0; i<n; i++) {
 		PyObject *v;
 		c = PyTuple_GET_ITEM(self->converter, i);
-		v = _mysql_field_to_python(c, row[i], length[i], charset);
+		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BINARY_FLAG);
 		if (!v) goto error;
 		PyTuple_SET_ITEM(r, i, v);
 	}
@@ -1413,7 +1411,7 @@ _mysql_row_to_dict(
 	for (i=0; i<n; i++) {
 		PyObject *v;
 		c = PyTuple_GET_ITEM(self->converter, i);
-		v = _mysql_field_to_python(c, row[i], length[i], charset);
+		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BINARY_FLAG);
 		if (!v) goto error;
 		if (!PyMapping_HasKeyString(r, fields[i].name)) {
 			PyMapping_SetItemString(r, fields[i].name, v);
@@ -1460,7 +1458,7 @@ _mysql_row_to_dict_old(
 	for (i=0; i<n; i++) {
 		PyObject *v;
 		c = PyTuple_GET_ITEM(self->converter, i);
-		v = _mysql_field_to_python(c, row[i], length[i], charset);
+		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BINARY_FLAG);
 		if (!v) goto error;
 		{
 			int len=0;
