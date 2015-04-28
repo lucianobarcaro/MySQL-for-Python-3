@@ -1314,7 +1314,7 @@ _mysql_ResultObject_field_flags(
 }
 
 static PyObject *
-_mysql_field_to_python(PyObject *converter, char *rowitem, unsigned long length, const char *charset, unsigned long blob)
+_mysql_field_to_python(PyObject *converter, char *rowitem, unsigned long length, const char *charset, unsigned blob)
 {
 	PyObject *v;
 
@@ -1376,7 +1376,7 @@ _mysql_row_to_tuple(
 	for (i=0; i<n; i++) {
 		PyObject *v;
 		c = PyTuple_GET_ITEM(self->converter, i);
-		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BLOB_FLAG);
+		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BLOB_FLAG && fields[i].flags & BINARY_FLAG);
 		if (!v) goto error;
 		PyTuple_SET_ITEM(r, i, v);
 	}
@@ -1411,7 +1411,7 @@ _mysql_row_to_dict(
 	for (i=0; i<n; i++) {
 		PyObject *v;
 		c = PyTuple_GET_ITEM(self->converter, i);
-		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BLOB_FLAG);
+		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BLOB_FLAG && fields[i].flags & BINARY_FLAG);
 		if (!v) goto error;
 		if (!PyMapping_HasKeyString(r, fields[i].name)) {
 			PyMapping_SetItemString(r, fields[i].name, v);
@@ -1458,7 +1458,7 @@ _mysql_row_to_dict_old(
 	for (i=0; i<n; i++) {
 		PyObject *v;
 		c = PyTuple_GET_ITEM(self->converter, i);
-		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BLOB_FLAG);
+		v = _mysql_field_to_python(c, row[i], length[i], charset, fields[i].flags & BLOB_FLAG && fields[i].flags & BINARY_FLAG);
 		if (!v) goto error;
 		{
 			int len=0;
